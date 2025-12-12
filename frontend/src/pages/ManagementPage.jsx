@@ -1,0 +1,1 @@
+export default function ManagementPage() { return <h1>Management Page</h1> }
