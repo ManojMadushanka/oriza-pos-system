@@ -8,7 +8,7 @@ export default function OrdersPage() {
 
     // Orders ලෝඩ් කරගැනීම
     const fetchOrders = () => {
-        axios.get('http://localhost:5000/api/orders')
+        axios.get('https://oriza-pos-system.onrender.com/api/orders')
             .then(res => setOrders(res.data))
             .catch(err => console.error(err));
     };

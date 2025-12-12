@@ -17,7 +17,7 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
     // 1. Modal එක Load වෙනකොට බඩු ලිස්ට් එක ගේන්න
     useEffect(() => {
         if (show) {
-            axios.get('http://localhost:5000/api/products')
+            axios.get('https://oriza-pos-system.onrender.com/api/products')
                 .then(res => setProducts(res.data))
                 .catch(err => console.error(err));
         }
@@ -62,7 +62,7 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
             deliveryFee: deliveryFee === 'Free' ? 0 : Number(deliveryFee)
         };
 
-        axios.post('http://localhost:5000/api/orders', orderData)
+        axios.post('https://oriza-pos-system.onrender.com/api/orders', orderData)
             .then(res => {
                 alert("Order Created Successfully! ✅");
                 onOrderSaved(); // List එක Refresh කරන්න
