@@ -5,6 +5,7 @@ import CreateOrderModal from '../components/CreateOrderModal';
 export default function OrdersPage() {
     const [orders, setOrders] = useState([]);
     const [showModal, setShowModal] = useState(false);
+    const [editingOrder, setEditingOrder] = useState(null);
 
     // Orders ලෝඩ් කරගැනීම
     const fetchOrders = () => {
@@ -21,7 +22,7 @@ export default function OrdersPage() {
         <div className="container mt-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2>📦 Orders Dashboard</h2>
-                <button className="btn btn-success" onClick={() => setShowModal(true)}>
+                <button className="btn btn-success" onClick={() => { setEditingOrder(null); setShowModal(true); }}>
                     + New Order
                 </button>
             </div>
@@ -38,6 +39,7 @@ export default function OrdersPage() {
                                 <th>Total</th>
                                 <th>Payment</th>
                                 <th>Items</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -59,6 +61,14 @@ export default function OrdersPage() {
                                         {order.isPaymentReceived && <span className="ms-1">✅</span>}
                                     </td>
                                     <td>{order.items.length} Items</td>
+                                    <td>
+                                        <button
+                                            className="btn btn-sm btn-outline-primary"
+                                            onClick={() => { setEditingOrder(order); setShowModal(true); }}
+                                        >
+                                            ✏️ Edit
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -67,10 +77,11 @@ export default function OrdersPage() {
             </div>
 
             {/* අර අපි හදපු Modal එක මෙතන සම්බන්ධ කරනවා */}
-            <CreateOrderModal 
-                show={showModal} 
-                onClose={() => setShowModal(false)} 
-                onOrderSaved={fetchOrders} 
+            <CreateOrderModal
+                show={showModal}
+                onClose={() => { setShowModal(false); setEditingOrder(null); }}
+                onOrderSaved={fetchOrders}
+                orderToEdit={editingOrder}
             />
         </div>
     );

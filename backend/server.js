@@ -74,19 +74,19 @@ app.post('/api/products', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
     try {
         const { items, totalAmount, customerDetails, trackingNumber, status, paymentMethod, deliveryFee, isPaymentReceived } = req.body;
-        
+
         const updatedItems = [];
         for (const item of items) {
             const product = await Product.findById(item.productId);
-            if(product) {
+            if (product) {
                 product.stock -= item.quantity; // Stock අඩු වෙනවා
                 await product.save();
                 updatedItems.push({ ...item, costPrice: product.costPrice || 0 }); // Cost එක සේව් වෙනවා
             }
         }
 
-        const newOrder = new Order({ 
-            items: updatedItems, totalAmount, customerDetails, trackingNumber, status, paymentMethod, deliveryFee, isPaymentReceived 
+        const newOrder = new Order({
+            items: updatedItems, totalAmount, customerDetails, trackingNumber, status, paymentMethod, deliveryFee, isPaymentReceived
         });
         await newOrder.save();
         res.json({ message: "Order Placed Successfully!", orderId: newOrder._id });
@@ -95,9 +95,26 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
+
 app.get('/api/orders', async (req, res) => {
     const orders = await Order.find().sort({ date: -1 });
     res.json(orders);
+});
+
+// Update Order (Edit)
+app.put('/api/orders/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        // Note: For MVP, we are not recalculating stock on edit to keep it simple.
+        // If stock management becomes critical for edits, we can add logic here.
+
+        const updatedOrder = await Order.findByIdAndUpdate(id, updateData, { new: true });
+        res.json(updatedOrder);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // --- Expenses ---
