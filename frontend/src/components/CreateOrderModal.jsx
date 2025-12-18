@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
+export default function CreateOrderModal({ show, onClose, onOrderSaved, orderToEdit }) {
     // Form Data
     const [customer, setCustomer] = useState({ name: '', phone: '', address: '' });
     const [trackingNumber, setTrackingNumber] = useState('');
@@ -14,14 +14,45 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
     const [products, setProducts] = useState([]);
     const [selectedItems, setSelectedItems] = useState([]);
 
-    // 1. Modal එක Load වෙනකොට බඩු ලිස්ට් එක ගේන්න
     useEffect(() => {
         if (show) {
+            // Load Products
             axios.get('https://oriza-pos-system.onrender.com/api/products')
                 .then(res => setProducts(res.data))
                 .catch(err => console.error(err));
+
+            // If editing, fill fields
+            if (orderToEdit) {
+                setCustomer(orderToEdit.customerDetails);
+                setTrackingNumber(orderToEdit.trackingNumber);
+                setStatus(orderToEdit.status);
+                setPaymentMethod(orderToEdit.paymentMethod);
+                setIsPaymentReceived(orderToEdit.isPaymentReceived);
+                setDeliveryFee(orderToEdit.deliveryFee === 0 ? 'Free' : orderToEdit.deliveryFee);
+
+                // Set Items
+                // Note: We need to match the structure expected by toggleProduct or just set selectedItems directly
+                // stored items have quantity, here we handle default 1 but edit might have more.
+                // For MVP simply mapping back.
+                const itemsToEdit = orderToEdit.items.map(item => ({
+                    productId: item.productId,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity
+                }));
+                setSelectedItems(itemsToEdit);
+            } else {
+                // Reset if new order
+                setCustomer({ name: '', phone: '', address: '' });
+                setTrackingNumber('');
+                setStatus('Preparing');
+                setPaymentMethod('COD');
+                setIsPaymentReceived(false);
+                setDeliveryFee(350);
+                setSelectedItems([]);
+            }
         }
-    }, [show]);
+    }, [show, orderToEdit]);
 
     // 2. බඩු Select කරන Logic එක (Checkbox Click කරාම)
     const toggleProduct = (product) => {
@@ -47,9 +78,10 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
     };
 
     // 4. Order එක Save කිරීම (Submit)
+    // 4. Order එක Save කිරීම (Submit)
     const handleSubmit = () => {
-        if(selectedItems.length === 0) return alert("Please select at least one product!");
-        if(!customer.name) return alert("Please enter customer name!");
+        if (selectedItems.length === 0) return alert("Please select at least one product!");
+        if (!customer.name) return alert("Please enter customer name!");
 
         const orderData = {
             customerDetails: customer,
@@ -62,16 +94,26 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
             deliveryFee: deliveryFee === 'Free' ? 0 : Number(deliveryFee)
         };
 
-        axios.post('https://oriza-pos-system.onrender.com/api/orders', orderData)
-            .then(res => {
-                alert("Order Created Successfully! ✅");
-                onOrderSaved(); // List එක Refresh කරන්න
-                onClose(); // Modal එක වහන්න
-                // Reset Fields
-                setSelectedItems([]);
-                setCustomer({ name: '', phone: '', address: '' });
-            })
-            .catch(err => alert("Error creating order: " + err.message));
+        if (orderToEdit) {
+            // Update Existing Order
+            axios.put(`https://oriza-pos-system.onrender.com/api/orders/${orderToEdit._id}`, orderData)
+                .then(res => {
+                    alert("Order Updated Successfully! ✅");
+                    onOrderSaved();
+                    onClose();
+                })
+                .catch(err => alert("Error updating order: " + err.message));
+        } else {
+            // Create New Order
+            axios.post('https://oriza-pos-system.onrender.com/api/orders', orderData)
+                .then(res => {
+                    alert("Order Created Successfully! ✅");
+                    onOrderSaved();
+                    onClose();
+                    // Reset Fields handled in effect now
+                })
+                .catch(err => alert("Error creating order: " + err.message));
+        }
     };
 
     if (!show) return null; // Modal එක පෙන්නන්න එපා නම් නවතින්න
@@ -81,7 +123,7 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
             <div className="modal-dialog modal-xl">
                 <div className="modal-content">
                     <div className="modal-header bg-success text-white">
-                        <h5 className="modal-title">Create New Order</h5>
+                        <h5 className="modal-title">{orderToEdit ? 'Edit Order' : 'Create New Order'}</h5>
                         <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
                     </div>
                     <div className="modal-body">
@@ -90,22 +132,22 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
                             <div className="col-md-6 border-end">
                                 <h6 className="fw-bold text-muted mb-3">Customer Information</h6>
                                 <div className="mb-2">
-                                    <input type="text" className="form-control" placeholder="Customer Name *" 
-                                        value={customer.name} onChange={e => setCustomer({...customer, name: e.target.value})} />
+                                    <input type="text" className="form-control" placeholder="Customer Name *"
+                                        value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })} />
                                 </div>
                                 <div className="mb-2">
-                                    <input type="text" className="form-control" placeholder="Phone Number" 
-                                        value={customer.phone} onChange={e => setCustomer({...customer, phone: e.target.value})} />
+                                    <input type="text" className="form-control" placeholder="Phone Number"
+                                        value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })} />
                                 </div>
                                 <div className="mb-3">
                                     <textarea className="form-control" placeholder="Address" rows="2"
-                                        value={customer.address} onChange={e => setCustomer({...customer, address: e.target.value})}></textarea>
+                                        value={customer.address} onChange={e => setCustomer({ ...customer, address: e.target.value })}></textarea>
                                 </div>
 
                                 <h6 className="fw-bold text-muted mb-3 mt-4">Order Details</h6>
                                 <div className="mb-2">
                                     <label className="small">Tracking Number</label>
-                                    <input type="text" className="form-control" placeholder="Ex: 1234567" 
+                                    <input type="text" className="form-control" placeholder="Ex: 1234567"
                                         value={trackingNumber} onChange={e => setTrackingNumber(e.target.value)} />
                                 </div>
                                 <div className="mb-2">
@@ -144,8 +186,8 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
                                         return (
                                             <label key={product._id} className={`list-group-item d-flex justify-content-between align-items-center ${isSelected ? 'active' : ''}`}>
                                                 <div>
-                                                    <input className="form-check-input me-2" type="checkbox" 
-                                                        checked={!!isSelected} 
+                                                    <input className="form-check-input me-2" type="checkbox"
+                                                        checked={!!isSelected}
                                                         onChange={() => toggleProduct(product)} />
                                                     {product.name}
                                                 </div>
@@ -157,8 +199,8 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
 
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <div className="form-check">
-                                        <input className="form-check-input" type="checkbox" 
-                                            checked={deliveryFee === 'Free'} 
+                                        <input className="form-check-input" type="checkbox"
+                                            checked={deliveryFee === 'Free'}
                                             onChange={e => setDeliveryFee(e.target.checked ? 'Free' : 350)} />
                                         <label className="form-check-label">Free Delivery</label>
                                     </div>
@@ -175,7 +217,9 @@ export default function CreateOrderModal({ show, onClose, onOrderSaved }) {
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-                        <button type="button" className="btn btn-danger px-4" onClick={handleSubmit}>Confirm Order</button>
+                        <button type="button" className="btn btn-danger px-4" onClick={handleSubmit}>
+                            {orderToEdit ? 'Update Order' : 'Confirm Order'}
+                        </button>
                     </div>
                 </div>
             </div>
